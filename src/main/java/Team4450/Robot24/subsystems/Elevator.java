@@ -16,6 +16,8 @@ import com.revrobotics.SparkLimitSwitch.Type;
 import Team4450.Lib.Util;
 import Team4450.Robot24.AdvantageScope;
 import Team4450.Robot24.Robot;
+import edu.wpi.first.math.controller.ArmFeedforward;
+import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
@@ -29,6 +31,8 @@ public class Elevator extends SubsystemBase {
 
     // private PIDController mainPID;
     private ProfiledPIDController mainPID;
+    private ElevatorFeedforward mainFeedforward;
+
     private PIDController centerstagePID;
 
     private SparkLimitSwitch lowerLimitSwitch;
@@ -77,8 +81,11 @@ public class Elevator extends SubsystemBase {
         // followEncoder.setPositionConversionFactor(-1);
 
         mainPID = new ProfiledPIDController(0.12, 0, 0, new Constraints(200, 1));
+        mainFeedforward = new ElevatorFeedforward(1.75, 1.95, 0);
+
         SmartDashboard.putData("winch_pid", mainPID);
         mainPID.setTolerance(MAIN_TOLERANCE);
+
         // followerPID = new PIDController(0.01, 0, 0);
         centerstagePID = new PIDController(0.03, 0, 0);
         centerstagePID.setTolerance(CENTERSTAGE_TOLERANCE);
@@ -114,11 +121,19 @@ public class Elevator extends SubsystemBase {
         SmartDashboard.putNumber("winch_setpoint", goal);
         // mainPID.setSetpoint(goal);
         mainPID.setGoal(goal);
+
         double nonclamped = mainPID.calculate(mainEncoder.getPosition());
-        SmartDashboard.putNumber("winch_nonclamped", nonclamped);
-        double motorOutput = Util.clampValue(nonclamped, 1);
-        SmartDashboard.putNumber("winch_output", motorOutput);
+        double feedForward = mainFeedforward.calculate(mainPID.getSetpoint().velocity);
+
+        Util.consoleLog("FF=%f", feedForward);
+
+        double motorOutput = Util.clampValue(nonclamped + feedForward, 1);
         motorMain.set(motorOutput);
+
+        SmartDashboard.putNumber("winch_nonclamped", nonclamped);
+        SmartDashboard.putNumber("winch_output", motorOutput);
+
+
         if (Robot.isSimulation()) mainEncoder.setPosition(mainEncoder.getPosition() + (1*motorOutput));
         if (Robot.isSimulation()) followEncoder.setPosition(followEncoder.getPosition() + (1*motorOutput));
 
