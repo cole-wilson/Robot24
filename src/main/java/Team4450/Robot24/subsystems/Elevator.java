@@ -111,7 +111,7 @@ public class Elevator extends SubsystemBase {
         // main pid/profile loop
         mainPID.setGoal(goal);
         double nonclamped = mainPID.calculate(mainEncoder.getPosition());
-        double motorOutput = Util.clampValue(nonclamped, 1);
+        double motorOutput = Util.clampValue(nonclamped, 0.5);
         SmartDashboard.putNumber("elevator speed", motorOutput);
         motorMain.set(motorOutput);
 
